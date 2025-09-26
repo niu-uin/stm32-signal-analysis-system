@@ -1,145 +1,150 @@
+/* USER CODE BEGIN Header */
 /**
- ****************************************************************************************************
- * @file        adc.c
- * @author      正点原子团队(ALIENTEK)
- * @version     V1.0
- * @date        2021-10-18
- * @brief       ADC 驱动代码
- * @license     Copyright (c) 2020-2032, 广州市星翼电子科技有限公司
- ****************************************************************************************************
- * @attention
- *
- * 实验平台:正点原子 探索者 F407开发板
- * 在线视频:www.yuanzige.com
- * 技术论坛:www.openedv.com
- * 公司网址:www.alientek.com
- * 购买地址:openedv.taobao.com
- *
- * 修改说明
- * V1.0 20211018
- * 第一次发布
- *
- ****************************************************************************************************
- */
+  ******************************************************************************
+  * @file    adc.c
+  * @brief   This file provides code for the configuration
+  *          of the ADC instances.
+  ******************************************************************************
+  * @attention
+  *
+  * Copyright (c) 2025 STMicroelectronics.
+  * All rights reserved.
+  *
+  * This software is licensed under terms that can be found in the LICENSE file
+  * in the root directory of this software component.
+  * If no LICENSE file comes with this software, it is provided AS-IS.
+  *
+  ******************************************************************************
+  */
+/* USER CODE END Header */
+/* Includes ------------------------------------------------------------------*/
+#include "adc.h"
 
-#include "./BSP/ADC/adc.h"
-#include "./SYSTEM/delay/delay.h"
+/* USER CODE BEGIN 0 */
 
+/* USER CODE END 0 */
 
-ADC_HandleTypeDef g_adc_handle;   /* ADC句柄 */
+ADC_HandleTypeDef hadc1;
+DMA_HandleTypeDef hdma_adc1;
 
-/**
- * @brief       ADC初始化函数
- *   @note      本函数支持ADC1/ADC2任意通道, 但是不支持ADC3
- *              我们使用12位精度, ADC采样时钟=21M, 转换时间为: 采样周期 + 12个ADC周期
- *              设置最大采样周期: 480, 则转换时间 = 492 个ADC周期 = 23.42us
- * @param       无
- * @retval      无
- */
-void adc_init(void)
+/* ADC1 init function */
+void MX_ADC1_Init(void)
 {
-    g_adc_handle.Instance = ADC_ADCX;
-    g_adc_handle.Init.ClockPrescaler = ADC_CLOCKPRESCALER_PCLK_DIV4;        /* 4分频，ADCCLK = PCLK2/4 = 84/4 = 21Mhz */
-    g_adc_handle.Init.Resolution = ADC_RESOLUTION_12B;                      /* 12位模式 */
-    g_adc_handle.Init.DataAlign = ADC_DATAALIGN_RIGHT;                      /* 右对齐 */
-    g_adc_handle.Init.ScanConvMode = DISABLE;                               /* 非扫描模式 */
-    g_adc_handle.Init.ContinuousConvMode = DISABLE;                         /* 关闭连续转换 */
-    g_adc_handle.Init.NbrOfConversion = 1;                                  /* 1个转换在规则序列中 也就是只转换规则序列1 */
-    g_adc_handle.Init.DiscontinuousConvMode = DISABLE;                      /* 禁止不连续采样模式 */
-    g_adc_handle.Init.NbrOfDiscConversion = 0;                              /* 不连续采样通道数为0 */
-    g_adc_handle.Init.ExternalTrigConv = ADC_SOFTWARE_START;                /* 软件触发 */
-    g_adc_handle.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE; /* 使用软件触发 */
-    g_adc_handle.Init.DMAContinuousRequests = DISABLE;                      /* 关闭DMA请求 */
-    HAL_ADC_Init(&g_adc_handle);                                            /* 初始化 */
+
+  /* USER CODE BEGIN ADC1_Init 0 */
+
+  /* USER CODE END ADC1_Init 0 */
+
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN ADC1_Init 1 */
+
+  /* USER CODE END ADC1_Init 1 */
+
+  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
+  */
+  hadc1.Instance = ADC1;
+  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
+  hadc1.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc1.Init.ScanConvMode = DISABLE;
+  hadc1.Init.ContinuousConvMode = DISABLE;
+  hadc1.Init.DiscontinuousConvMode = DISABLE;
+  hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
+  hadc1.Init.ExternalTrigConv = ADC_EXTERNALTRIGCONV_T3_TRGO;
+  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc1.Init.NbrOfConversion = 1;
+  hadc1.Init.DMAContinuousRequests = ENABLE;
+  hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  if (HAL_ADC_Init(&hadc1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+  */
+  sConfig.Channel = ADC_CHANNEL_3;
+  sConfig.Rank = 1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC1_Init 2 */
+
+  /* USER CODE END ADC1_Init 2 */
+
 }
 
-/**
- * @brief       ADC底层驱动，引脚配置，时钟使能
-                此函数会被HAL_ADC_Init()调用
- * @param       hadc:ADC句柄
- * @retval      无
- */
-void HAL_ADC_MspInit(ADC_HandleTypeDef *hadc)
+void HAL_ADC_MspInit(ADC_HandleTypeDef* adcHandle)
 {
-    if(hadc->Instance == ADC_ADCX)
+
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+  if(adcHandle->Instance==ADC1)
+  {
+  /* USER CODE BEGIN ADC1_MspInit 0 */
+
+  /* USER CODE END ADC1_MspInit 0 */
+    /* ADC1 clock enable */
+    __HAL_RCC_ADC1_CLK_ENABLE();
+
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    /**ADC1 GPIO Configuration
+    PA3     ------> ADC1_IN3
+    */
+    GPIO_InitStruct.Pin = GPIO_PIN_3;
+    GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+    /* ADC1 DMA Init */
+    /* ADC1 Init */
+    hdma_adc1.Instance = DMA2_Stream0;
+    hdma_adc1.Init.Channel = DMA_CHANNEL_0;
+    hdma_adc1.Init.Direction = DMA_PERIPH_TO_MEMORY;
+    hdma_adc1.Init.PeriphInc = DMA_PINC_DISABLE;
+    hdma_adc1.Init.MemInc = DMA_MINC_ENABLE;
+    hdma_adc1.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
+    hdma_adc1.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
+    hdma_adc1.Init.Mode = DMA_NORMAL;
+    hdma_adc1.Init.Priority = DMA_PRIORITY_LOW;
+    hdma_adc1.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+    if (HAL_DMA_Init(&hdma_adc1) != HAL_OK)
     {
-        GPIO_InitTypeDef gpio_init_struct;
-        ADC_ADCX_CHY_CLK_ENABLE();      /* 使能ADCx时钟 */
-        ADC_ADCX_CHY_GPIO_CLK_ENABLE(); /* 开启GPIO时钟 */
-
-        /* AD采集引脚模式设置,模拟输入 */
-        gpio_init_struct.Pin = ADC_ADCX_CHY_GPIO_PIN;
-        gpio_init_struct.Mode = GPIO_MODE_ANALOG;
-        gpio_init_struct.Pull = GPIO_NOPULL;
-        HAL_GPIO_Init(ADC_ADCX_CHY_GPIO_PORT, &gpio_init_struct);
-    }
-}
-
-/**
- * @brief       设置ADC通道采样时间
- * @param       adcx : adc句柄指针,ADC_HandleTypeDef
- * @param       ch   : 通道号, ADC_CHANNEL_0~ADC_CHANNEL_17
- * @param       stime: 采样时间  0~7, 对应关系为:
- *   @arg       ADC_SAMPLETIME_3CYCLES,  3个ADC时钟周期        ADC_SAMPLETIME_15CYCLES, 15个ADC时钟周期
- *   @arg       ADC_SAMPLETIME_28CYCLES, 28个ADC时钟周期       ADC_SAMPLETIME_56CYCLES, 56个ADC时钟周期
- *   @arg       ADC_SAMPLETIME_84CYCLES, 84个ADC时钟周期       ADC_SAMPLETIME_112CYCLES,112个ADC时钟周期
- *   @arg       ADC_SAMPLETIME_144CYCLES,144个ADC时钟周期      ADC_SAMPLETIME_480CYCLES,480个ADC时钟周期
- * @param       rank: 多通道采集时需要设置的采集编号,
-                假设你定义channel1的rank=1，channel2的rank=2，
-                那么对应你在DMA缓存空间的变量数组AdcDMA[0] 就i是channel1的转换结果，AdcDMA[1]就是通道2的转换结果。 
-                单通道DMA设置为 ADC_REGULAR_RANK_1
- *   @arg       编号1~16：ADC_REGULAR_RANK_1~ADC_REGULAR_RANK_16
- * @retval      无
- */
-void adc_channel_set(ADC_HandleTypeDef *adc_handle, uint32_t ch, uint32_t rank, uint32_t stime)
-{
-    /* 配置对应ADC通道 */
-    ADC_ChannelConfTypeDef adc_channel;
-    adc_channel.Channel = ch;               /* 设置ADCX对通道ch */
-    adc_channel.Rank = rank;                /* 设置采样序列 */
-    adc_channel.SamplingTime = stime;       /* 设置采样时间 */
-    HAL_ADC_ConfigChannel( adc_handle, &adc_channel);   
-}
-
-/**
- * @brief       获得ADC转换后的结果
- * @param       ch: 通道值 0~17，取值范围为：ADC_CHANNEL_0~ADC_CHANNEL_17
- * @retval      无
- */
-uint32_t adc_get_result(uint32_t ch)
-{
-    adc_channel_set(&g_adc_handle, ch, 1, ADC_SAMPLETIME_480CYCLES);   /* 设置通道，序列和采样时间 */
-    HAL_ADC_Start(&g_adc_handle);                                       /* 开启ADC */
-    HAL_ADC_PollForConversion(&g_adc_handle, 10);                       /* 轮询转换 */
-
-    return (uint16_t)HAL_ADC_GetValue(&g_adc_handle);                   /* 返回最近一次ADC1规则组的转换结果 */
-}
-
-/**
- * @brief       获取通道ch的转换值，取times次, 然后平均
- * @param       ch      : 通道号, 0~17
- * @param       times   : 获取次数
- * @retval      通道ch的times次转换结果平均值
- */
-uint32_t adc_get_result_average(uint32_t ch, uint8_t times)
-{
-    uint32_t temp_val = 0;
-    uint8_t t;
-
-    for (t = 0; t < times; t++)     /* 获取times次数据 */
-    {
-        temp_val += adc_get_result(ch);
-        delay_ms(5);
+      Error_Handler();
     }
 
-    return temp_val / times;        /* 返回平均值 */
+    __HAL_LINKDMA(adcHandle,DMA_Handle,hdma_adc1);
+
+  /* USER CODE BEGIN ADC1_MspInit 1 */
+
+  /* USER CODE END ADC1_MspInit 1 */
+  }
 }
 
+void HAL_ADC_MspDeInit(ADC_HandleTypeDef* adcHandle)
+{
 
+  if(adcHandle->Instance==ADC1)
+  {
+  /* USER CODE BEGIN ADC1_MspDeInit 0 */
 
+  /* USER CODE END ADC1_MspDeInit 0 */
+    /* Peripheral clock disable */
+    __HAL_RCC_ADC1_CLK_DISABLE();
 
+    /**ADC1 GPIO Configuration
+    PA3     ------> ADC1_IN3
+    */
+    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_3);
 
+    /* ADC1 DMA DeInit */
+    HAL_DMA_DeInit(adcHandle->DMA_Handle);
+  /* USER CODE BEGIN ADC1_MspDeInit 1 */
 
+  /* USER CODE END ADC1_MspDeInit 1 */
+  }
+}
 
+/* USER CODE BEGIN 1 */
 
-
+/* USER CODE END 1 */
