@@ -336,7 +336,7 @@
               <MiscControls>--diag_suppress=68 --diag_suppress=111 --diag_suppress=188 --diag_suppress=223 --diag_suppress=546  --diag_suppress=1295  --diag_suppress=2803,1,1035</MiscControls>
               <Define>USE_HAL_DRIVER,STM32F407xx,ARM_MATH_CM4</Define>
               <Undefine></Undefine>
-              <IncludePath>..\..\User;..\..\Drivers;..\..\Drivers\CMSIS\Device\ST\STM32F4xx\Include;..\..\Drivers\CMSIS\Include;..\..\Drivers\STM32F4xx_HAL_Driver\Inc;..\..\Middlewares;..\..\Middlewares\FreeRTOS\include;..\..\Middlewares\FreeRTOS\portable\RVDS\ARM_CM4F;..\..\Middlewares\LVGL\GUI;..\..\Middlewares\LVGL\GUI\lvgl;..\..\Middlewares\LVGL\GUI\lvgl\src;..\..\Middlewares\LVGL\GUI\lvgl\examples\porting;..\..\Middlewares\LVGL\GUI_APP\demos;..\..\Middlewares\LVGL\GUI_APP\demos\stress;..\..\Drivers\BSP\ula;..\..\Drivers\BSP\TIM</IncludePath>
+              <IncludePath>..\..\User;..\..\Drivers;..\..\Drivers\CMSIS\Device\ST\STM32F4xx\Include;..\..\Drivers\CMSIS\Include;..\..\Drivers\STM32F4xx_HAL_Driver\Inc;..\..\Middlewares;..\..\Middlewares\FreeRTOS\include;..\..\Middlewares\FreeRTOS\portable\RVDS\ARM_CM4F;..\..\Middlewares\LVGL\GUI;..\..\Middlewares\LVGL\GUI\lvgl;..\..\Middlewares\LVGL\GUI\lvgl\src;..\..\Middlewares\LVGL\GUI\lvgl\examples\porting;..\..\Middlewares\LVGL\GUI_APP\demos;..\..\Middlewares\LVGL\GUI_APP\demos\stress;..\..\Drivers\BSP\ula;..\..\Drivers\BSP\TIM;..\..\Drivers\BSP\AD9850</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -614,6 +614,11 @@
               <FileName>gpio.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\Drivers\BSP\ADC\gpio.c</FilePath>
+            </File>
+            <File>
+              <FileName>AD985x.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Drivers\BSP\AD9850\AD985x.c</FilePath>
             </File>
           </Files>
         </Group>

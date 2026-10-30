@@ -28,6 +28,7 @@
 #include "lv_port_indev_template.h"
 #include "lv_demo_stress.h"
 #include "./BSP/ADC/adc.h"
+#include "AD985x.h"
 
 #include "./BSP/KEY/key.h"
 #include "./SYSTEM/delay/delay.h"
@@ -55,11 +56,11 @@ void start_task(void *pvParameters);    /* ÈÎÎñº¯Êı */
 TaskHandle_t LV_DEMOTask_Handler;       /* ÈÎÎñ¾ä±ú */
 void lv_demo_task(void *pvParameters);  /* ÈÎÎñº¯Êı */
 
-#define  ADC1_DMA_Size	 1024      //ADCÊı¾İ¸öÊı
+#define  ADC1_DMA_Size	 4096      //ADCÊı¾İ¸öÊı
  
 extern uint32_t ADC1_ConvertedValue[ ADC1_DMA_Size ];   //¶¨ÒåADCÊı¾İ´æ´¢Êı×é
 
-#define  FFT_LENGTH		   1024
+#define  FFT_LENGTH		   4096
 extern int SAM_FRE; //²ÉÑùÂÊ
 
 /******************************************************************************************************/
@@ -135,16 +136,28 @@ void lv_demo_task(void *pvParameters)
 
 
 lv_obj_t * adc_label;
-lv_obj_t* line1, *line2, *line3;
+lv_obj_t * fre_label;
+lv_obj_t * val_label;
 int pos = 0;
 extern uint8_t  g_timxchy_cap_sta;              /* è¾“å…¥æ•è·çŠ¶æ€ */
 extern uint16_t g_timxchy_cap_val;              /* è¾“å…¥æ•è·å€¼ */
 lv_obj_t * ult_label;
-float adc_arr[1024];
-void adc_scan_task(void *arg){
-	uint16_t adcx, adcx2; float temp;
-    adc_label = lv_label_create(lv_scr_act());
+//float adc_arr[1024];
 
+
+/* USER CODE BEGIN PV */
+// float    fft_inputbuf [FFT_LENGTH*2];	
+// float    fft_outputbuf[FFT_LENGTH];
+
+void adc_scan_task(void *arg){
+    adc_label = lv_label_create(lv_scr_act());
+    fre_label = lv_label_create(lv_scr_act());
+    val_label = lv_label_create(lv_scr_act());
+    lv_obj_set_pos(fre_label, 0, 20);
+    lv_obj_set_pos(val_label, 0, 40);
+    int fpos=0;
+    char buffer[25];
+    float t=0;
 	while(1){
         xSemaphoreTake(xSemaphore, portMAX_DELAY);
 //            adcx = adc_get_result_average(ADC_ADCX_CHY, 1);
@@ -156,13 +169,74 @@ void adc_scan_task(void *arg){
 //            temp *= 1000; 
 //            adcx2 = temp;
 //            lv_label_set_text_fmt(adc_label, "ADC:%d.%dV", adcx, adcx2);
+        printf("begin\r\n");
         HAL_ADC_Start_DMA(&hadc1,(uint32_t*)ADC1_ConvertedValue,ADC1_DMA_Size);
-      	  for(int i=0;i<FFT_LENGTH;i++)
-	  {
-			printf("%f\r\n",ADC1_ConvertedValue[ i ]*3.3f/4095.0f);			
-	  }
-       
+//        for(int i=0;i<FFT_LENGTH;i++)
+//	    {
+//			printf("%f \t",ADC1_ConvertedValue[ i ]*3.3f/4095.0f);
+//            if(i % 10 == 0){
+//                printf("\r\n");
+//            }
+//	    }
+//        printf("\r\n");
+        
+        
+
+        
+        // Ê¹ÓÃ¹ıÁã¼ì²â·¨¼ÆËãÆµÂÊ
+        int zero_crossings = 0;
+        float mean = 0;
+        
+        // ¼ÆËã¾ùÖµ
+        for (int i = 0; i < FFT_LENGTH; i++) {
+            mean += ADC1_ConvertedValue[i];
+        }
+        mean /= FFT_LENGTH;
+        sprintf(buffer,"val %fV", mean*3.3f/4095.0f);
+        lv_label_set_text(val_label, buffer);
+        float fang=0;
+        for(int i = 0; i < FFT_LENGTH; i++)
+        {
+            fang+=(ADC1_ConvertedValue[i]-mean)*(ADC1_ConvertedValue[i]-mean);
+        }
+        fang=fang/FFT_LENGTH;
+        printf("fang: %f\r\n", fang);
+        
+        
+        if(fang >300000){
+            sprintf(buffer,"square wave");
+            lv_label_set_text(adc_label, buffer);
+        }else{
+            sprintf(buffer,"sine wave");
+            lv_label_set_text(adc_label, buffer);
+        }
+        
+        int state = 0;
+        int last_state = 0;
+        // ¼ÆËã¹ıÁãµã
+        for (int i = 1; i < FFT_LENGTH; i++) {
+            if (ADC1_ConvertedValue[i] > mean + 100) state = 1;
+            else if (ADC1_ConvertedValue[i] < mean - 100) state = -1;
+            if (state != last_state) { 
+                zero_crossings++;
+                last_state = state;
+            }
+        }
+
+        // ÆµÂÊ = ¹ıÁãµãÊı / 2 / ²ÉÑùÊ±¼ä  SAM_FRE
+        printf("zero_crossings: %d\r\n", zero_crossings);
+        float sampling_time = (float)138; // µ¥Î»Î¢Ãë
+        float frequency = (float)zero_crossings * 1000000 / 2.0f / sampling_time;
+        
+        
+        
+        printf("fre: %f %f us \r\n",frequency, sampling_time);	//Î´¼Ó´°
+        
+        AD9850_Write(0x00,(double)frequency);
+        sprintf(buffer,"fre %f", frequency);
+        lv_label_set_text(fre_label, buffer);
         xSemaphoreGive(xSemaphore);
+        HAL_Delay(10);
 
 	}
 }
